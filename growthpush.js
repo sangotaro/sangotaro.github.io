@@ -109,10 +109,14 @@ var _fetchRegistration = function () {
         return Promise.reject(new Error('Push messaging isn\'t supported.'));
     }
     return navigator.serviceWorker.ready.then(function (registration) {
-        registration.addEventListener('updatefound', function (event) {
+        var handleUpdateFound = function (event) {
+            console.log('updatefound', event);
+            registration.removeEventListener('updatefound', handleUpdateFound);
             // reinitialization
+            console.log('reinitialization');
             _init();
-        });
+        };
+        registration.addEventListener('updatefound', handleUpdateFound);
         return Promise.resolve(registration);
     });
 };
@@ -208,6 +212,7 @@ var _sendMessage = function (message) {
         var _message = JSON.stringify(message);
         var messageChannel = new MessageChannel();
         messageChannel.port1.onmessage = function (event) {
+            console.log('message', event);
             if (event.data.error) {
                 reject(event.data.error);
             }
@@ -215,6 +220,7 @@ var _sendMessage = function (message) {
                 resolve(event.data);
             }
         };
+        console.log('postMessage');
         navigator.serviceWorker.controller.postMessage(_message, [messageChannel.port2]);
     });
 };

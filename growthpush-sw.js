@@ -1,32 +1,40 @@
 /// <reference path="../local_typings/service_worker_api.d.ts" />
 var _config = {};
 self.addEventListener('install', function (event) {
-    console.log('install');
+    console.log('install', event);
     event.waitUntil(self.skipWaiting());
 });
 self.addEventListener('activate', function (event) {
-    console.log('activate');
+    console.log('activate', event);
     event.waitUntil(self.clients.claim());
 });
 self.addEventListener('message', function (event) {
+    console.log('message', event);
     var message = JSON.parse(event.data);
     if (message.type === 'config') {
         _config = message.data;
+        event.ports[0].postMessage({});
     }
-    event.ports[0].postMessage({});
+    else {
+        event.ports[0].postMessage({
+            error: new Error('Unsupported message type: ' + message.type)
+        });
+    }
 });
 self.addEventListener('push', function (event) {
-    console.log('push');
+    console.log('push', event);
     var url = 'https://api.growthpush.com/1/trials' + '?token=' + _config['subscriptionId'] + '&applicationId=' + _config['applicationId'] + '&secret=' + _config['credentialId'];
     event.waitUntil(handlePush(event));
 });
 self.addEventListener('notificationclick', function (event) {
-    console.log('notificationclick');
-    console.log('notification:', event.notification);
+    console.log('notificationclick', event);
     event.waitUntil(handleNotificationClick(event).then(sendClientEvent));
 });
 function handlePush(event) {
     return self.registration.pushManager.getSubscription().then(function (subscription) {
+        console.log('subscription:', subscription);
+        console.log('applicationId:', _config['applicationId']);
+        console.log('credentialId:', _config['credentialId']);
         var url = 'https://api.growthpush.com/1/trials' + '?token=' + getSubscriptionId(subscription) + '&applicationId=' + _config['applicationId'] + '&secret=' + _config['credentialId'];
         return self.fetch(url).then(function (res) {
             if (res.status !== 200)
