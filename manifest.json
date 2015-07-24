@@ -1,0 +1,13 @@
+{
+  "name": "Growth Push for browser",
+  "short_name": "GrowthPush",
+  "icons": [{
+    "src": "img/gp_icon.png",
+    "sizes": "256x256",
+    "type": "image/png"
+  }],
+  "start_url": "/",
+  "display": "standalone",
+  "gcm_sender_id": "15635537246",
+  "gcm_user_visible_only": true
+}
