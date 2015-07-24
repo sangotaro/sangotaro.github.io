@@ -220,7 +220,7 @@ var _sendMessage = function (message) {
                 resolve(event.data);
             }
         };
-        console.log('postMessage');
+        console.log('postMessage', message);
         navigator.serviceWorker.controller.postMessage(_message, [messageChannel.port2]);
     });
 };
