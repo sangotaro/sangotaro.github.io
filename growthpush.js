@@ -1,3 +1,21 @@
+/**
+ * Modules in this bundle
+ * 
+ * component-emitter:
+ *   license: MIT
+ *   maintainers: tootallnate <nathan@tootallnate.net>, tjholowaychuk <tj@vision-media.ca>, rauchg <rauchg@gmail.com>, retrofox <rdsuarez@gmail.com>, coreh <thecoreh@gmail.com>, forbeslindesay <forbes@lindesay.co.uk>, kelonye <kelonyemitchel@gmail.com>, mattmueller <mattmuelle@gmail.com>, yields <yields@icloud.com>, anthonyshort <antshort@gmail.com>, jongleberry <jonathanrichardong@gmail.com>, ianstormtaylor <ian@ianstormtaylor.com>, cristiandouce <cristian@gravityonmars.com>, swatinem <arpad.borsos@googlemail.com>, stagas <gstagas@gmail.com>, amasad <amjad.masad@gmail.com>, juliangruber <julian@juliangruber.com>, shtylman <shtylman@gmail.com>, calvinfo <calvin@calv.info>, dominicbarnes <dominic@dbarnes.info>, blakeembrey <hello@blakeembrey.com>, timoxley <secoif@gmail.com>, jonathanong <jonathanrichardong@gmail.com>, queckezz <fabian.eichenberger@gmail.com>, nami-doc <vendethiel@hotmail.fr>, clintwood <clint@anotherway.co.za>, thehydroimpulse <dnfagnan@gmail.com>, stephenmathieson <me@stephenmathieson.com>, trevorgerhardt <trevorgerhardt@gmail.com>, timaschew <timaschew@gmail.com>, hughsk <hughskennedy@gmail.com>
+ *   version: 1.2.0
+ * 
+ * growthpush-javascript:
+ *   version: 0.1.0
+ * 
+ * nanoajax:
+ *   license: MIT
+ *   author: Jon Eisen <jon@joneisen.me>
+ *   maintainers: yanatan16 <jon.m.eisen@gmail.com>
+ *   version: 0.3.1
+ * 
+ */
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.GrowthPush = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 var nanoajax = require('nanoajax');
 var HttpClient = (function () {

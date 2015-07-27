@@ -23,7 +23,6 @@ self.addEventListener('message', function (event) {
 });
 self.addEventListener('push', function (event) {
     console.log('push', event);
-    var url = 'https://api.growthpush.com/1/trials' + '?token=' + _config['subscriptionId'] + '&applicationId=' + _config['applicationId'] + '&secret=' + _config['credentialId'];
     event.waitUntil(handlePush(event));
 });
 self.addEventListener('notificationclick', function (event) {
