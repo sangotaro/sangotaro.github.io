@@ -213,7 +213,7 @@ var _updateClient = function (client, subscription) {
 };
 var _configure = function (params) {
     return _sendMessage({
-        type: 'config',
+        type: 'init',
         data: {
             applicationId: _params.applicationId,
             credentialId: _params.credentialId,
