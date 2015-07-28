@@ -132,7 +132,7 @@ var _fetchRegistration = function () {
             registration.removeEventListener('updatefound', handleUpdateFound);
             // reinitialization
             console.log('reinitialization');
-            _init();
+            register();
         };
         registration.addEventListener('updatefound', handleUpdateFound);
         return Promise.resolve(registration);
@@ -259,10 +259,11 @@ function init(params) {
         throw new Error('GrowthPush: unsupported environment: ' + params.environment);
     }
     _params = params;
-    _init();
 }
 exports.init = init;
-var _init = function () {
+function register() {
+    if (!_initialized)
+        return;
     if (!('serviceWorker' in navigator)) {
         console.warn('Service workers aren\'t supported in this browser.');
         return;
@@ -273,7 +274,8 @@ var _init = function () {
         console.log(err);
         _initialized = false;
     });
-};
+}
+exports.register = register;
 // TODO: move to Growthbeat
 var _fetchClient = function (callback) {
     var timerId = setInterval(function () {
@@ -326,6 +328,14 @@ function track(name, value) {
     });
 }
 exports.track = track;
+function permitted() {
+    if (!('serviceWorker' in navigator))
+        return false;
+    if (Notification.permission !== 'granted')
+        return false;
+    return true;
+}
+exports.permitted = permitted;
 
 },{"../utils/local-storage-wrapper":5,"./http/http-client":1,"./model/client":3}],3:[function(require,module,exports){
 var __extends = this.__extends || function (d, b) {

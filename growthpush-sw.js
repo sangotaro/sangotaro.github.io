@@ -111,4 +111,3 @@ function getSubscriptionId(subscription) {
     }
     return subscription.subscriptionId;
 }
-;
