@@ -47,11 +47,7 @@ function handlePush(event) {
         return self.fetch(url).then(function (res) {
             if (res.status !== 200)
                 return Promise.reject('Status code isn\'t 200');
-            return Promise.resolve(res);
-        });
-    }).then(function (res) {
-        return res.json().then(function (data) {
-            return Promise.resolve(data);
+            return Promise.resolve(res.json());
         });
     }).then(function (data) {
         var hash = (data.extra == null) ? '' : '#' + encodeURIComponent(data.extra);
