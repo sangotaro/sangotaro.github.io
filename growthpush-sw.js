@@ -7,7 +7,7 @@ self.addEventListener('install', function (event) {
 });
 self.addEventListener('activate', function (event) {
     console.log('activate', event);
-    //event.waitUntil(self.clients.claim());
+    event.waitUntil(self.clients.claim());
 });
 self.addEventListener('message', function (event) {
     console.log('message', event);
