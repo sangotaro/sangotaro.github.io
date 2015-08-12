@@ -150,11 +150,11 @@ var _fetchSubscription = function (registration) {
     });
 };
 var _subscribe = function (registration) {
-    //var opt = {
-    //    userVisibleOnly: false,
-    //    userVisible: false,
-    //};
-    return registration.pushManager.subscribe({}).then(function (subscription) {
+    var opt = {
+        userVisibleOnly: false,
+        //userVisible: false,
+    };
+    return registration.pushManager.subscribe(opt).then(function (subscription) {
         console.log('subscription:', subscription);
         return Promise.resolve(subscription);
     }).catch(function (err) {
