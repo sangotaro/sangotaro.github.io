@@ -17,7 +17,7 @@ self.addEventListener('message', function (event) {
     var message = JSON.parse(event.data);
     if (message.type === 'init') {
         setConfig(message.data).then(function () {
-            init();
+            //init();
             event.ports[0].postMessage({});
         }).catch(function (err) {
             event.ports[0].postMessage({
@@ -31,24 +31,23 @@ self.addEventListener('message', function (event) {
         });
     }
 });
-function init() {
-    if (_initialized)
-        return;
-    _initialized = true;
-    self.addEventListener('push', function (event) {
-        console.log('push', event);
-        event.waitUntil(self.registration.showNotification('固定タイトル', {
-            icon: '/sample/img/gp_icon.png',
-            body: '固定テキスト',
-            tag: 'growthpush-trialId=',
-            vibrate: 1000,
-        }));
-    });
-    self.addEventListener('notificationclick', function (event) {
-        console.log('notificationclick', event);
-        event.waitUntil(handleNotificationClick(event).then(sendClientEvent));
-    });
-}
+//function init() {
+//    if (_initialized) return;
+//    _initialized = true;
+self.addEventListener('push', function (event) {
+    console.log('push', event);
+    event.waitUntil(self.registration.showNotification('固定タイトル', {
+        icon: '/sample/img/gp_icon.png',
+        body: '固定テキスト',
+        tag: 'growthpush-trialId=',
+        vibrate: 1000,
+    }));
+});
+self.addEventListener('notificationclick', function (event) {
+    console.log('notificationclick', event);
+    event.waitUntil(handleNotificationClick(event).then(sendClientEvent));
+});
+//}
 function handlePush(event) {
     return self.registration.showNotification('固定タイトル', {
         icon: '/sample/img/gp_icon.png',
