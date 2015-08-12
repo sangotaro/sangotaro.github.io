@@ -29,7 +29,27 @@ function init(data) {
     _config = data;
     self.addEventListener('push', function (event) {
         console.log('push', event);
-        event.waitUntil(handlePush(event));
+        //event.waitUntil(handlePush(event));
+        event.waitUntil(self.registration.pushManager.getSubscription().then(function (subscription) {
+            var url = 'https://api.growthpush.com/1/trials' + '?token=' + getSubscriptionId(subscription) + '&applicationId=' + _config['applicationId'] + '&secret=' + _config['credentialId'];
+            return self.fetch(url).then(function (res) {
+                if (res.status !== 200)
+                    return Promise.reject('Status code isn\'t 200');
+                return res.json().then(function(data) {
+                    var hash = (data.extra == null) ? '' : '#' + encodeURIComponent(data.extra);
+                    return self.registration.showNotification(_config['title'], {
+                        icon: _config['icon'] + hash,
+                        body: data.text,
+                        tag: 'growthpush-trialId=' + data.trialId,
+                        vibrate: data.sound ? 1000 : 0,
+                    });
+                });
+            }).catch(function (err) {
+                console.log(err);
+                return Promise.reject(err);
+            });
+        }));
+
     });
     self.addEventListener('notificationclick', function (event) {
         console.log('notificationclick', event);
@@ -47,7 +67,7 @@ function handlePush(event) {
         return self.fetch(url).then(function (res) {
             if (res.status !== 200)
                 return Promise.reject('Status code isn\'t 200');
-            return Promise.resolve(res.json());
+            return res.json();
         });
     }).then(function (data) {
         var hash = (data.extra == null) ? '' : '#' + encodeURIComponent(data.extra);
