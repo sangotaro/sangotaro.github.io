@@ -67,8 +67,8 @@ function handlePush(event) {
     }).then(function (data) {
         var hash = (data.extra == null) ? '' : '#' + encodeURIComponent(data.extra);
         return self.registration.showNotification(_config['title'], {
-            icon: _config['icon'] + hash,
-            body: data.text,
+            icon: '/sample/img/gp_icon.png',
+            body: '固定テキスト',
             tag: 'growthpush-trialId=' + data.trialId,
             vibrate: data.sound ? 1000 : 0,
         });
