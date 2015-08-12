@@ -3,7 +3,7 @@ var _initialized = false;
 var _config = {};
 self.addEventListener('install', function (event) {
     console.log('install', event);
-    event.waitUntil(self.skipWaiting());
+    //event.waitUntil(self.skipWaiting());
 });
 self.addEventListener('activate', function (event) {
     console.log('activate', event);
