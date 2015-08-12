@@ -9,5 +9,5 @@
   "start_url": "/",
   "display": "standalone",
   "gcm_sender_id": "15635537246",
-  "gcm_user_visible_only": true
+  "gcm_user_visible_only": false
 }

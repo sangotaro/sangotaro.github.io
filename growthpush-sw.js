@@ -1,9 +1,7 @@
 /// <reference path="../local_typings/service_worker_api.d.ts" />
-'use strict';
 var DB_NAME = 'growthpush';
 var DB_VERSION = 1;
-var DB_STORE_NAME = 'misc';
-var _initialized = false;
+var DB_STORE_NAME = 'kvs';
 self.addEventListener('install', function (event) {
     console.log('install', event);
     event.waitUntil(self.skipWaiting());
@@ -16,12 +14,14 @@ self.addEventListener('message', function (event) {
     console.log('message', event);
     var message = JSON.parse(event.data);
     if (message.type === 'init') {
-        setConfig(message.data).then(function () {
-            //init();
-            event.ports[0].postMessage({});
+        IDBHelper.open().then(function () {
+            message.data.key = 'config';
+            return IDBHelper.put(message.data).then(function () {
+                event.ports[0].postMessage({});
+            });
         }).catch(function (err) {
             event.ports[0].postMessage({
-                error: new Error('Fail initialization: ' + err)
+                error: new Error('Fail initialization: ' + JSON.stringify(err))
             });
         });
     }
@@ -31,66 +31,49 @@ self.addEventListener('message', function (event) {
         });
     }
 });
-//function init() {
-//    if (_initialized) return;
-//    _initialized = true;
 self.addEventListener('push', function (event) {
     console.log('push', event);
-    event.waitUntil(self.registration.showNotification('固定タイトル', {
-        icon: '/sample/img/gp_icon.png',
-        body: '固定テキスト',
-        tag: 'growthpush-trialId=',
-        vibrate: 1000,
-    }));
+    event.waitUntil(handlePush(event));
 });
 self.addEventListener('notificationclick', function (event) {
     console.log('notificationclick', event);
     event.waitUntil(handleNotificationClick(event).then(sendClientEvent));
 });
-//}
 function handlePush(event) {
-    return self.registration.showNotification('固定タイトル', {
-        icon: '/sample/img/gp_icon.png',
-        body: '固定テキスト',
-        tag: 'growthpush-trialId=',
-        vibrate: 1000,
+    var _config = null;
+    return IDBHelper.open().then(function () {
+        return IDBHelper.get('config').then(function (result) {
+            _config = result;
+        });
+    }).then(function () {
+        return self.registration.pushManager.getSubscription().then(function (subscription) {
+            console.log('subscription:', subscription);
+            console.log('applicationId:', _config['applicationId']);
+            console.log('credentialId:', _config['credentialId']);
+            var url = 'https://api.growthpush.com/1/trials' + '?token=' + getSubscriptionId(subscription) + '&applicationId=' + _config['applicationId'] + '&secret=' + _config['credentialId'];
+            return Promise.resolve(url);
+        });
+    }).then(function (url) {
+        return self.fetch(url).then(function (res) {
+            if (res.status !== 200)
+                return Promise.reject('Status code isn\'t 200');
+            return Promise.resolve(res);
+        });
+    }).then(function (res) {
+        return res.json().then(function (data) {
+            return Promise.resolve(data);
+        });
+    }).then(function (data) {
+        var hash = (data.extra == null) ? '' : '#' + encodeURIComponent(data.extra);
+        return self.registration.showNotification(_config['title'], {
+            icon: _config['icon'] + hash,
+            body: data.text,
+            tag: 'growthpush-trialId=' + data.trialId,
+            vibrate: data.sound ? 1000 : 0,
+        });
+    }).catch(function (err) {
+        console.log(err);
     });
-    //var _config:any = null;
-    //return getConfig().then((config) => {
-    //    _config = config;
-    //    return self.registration.pushManager.getSubscription().then((subscription:PushSubscription) => {
-    //        console.log('subscription:', subscription);
-    //        console.log('applicationId:', _config['applicationId']);
-    //        console.log('credentialId:', _config['credentialId']);
-    //        var url = 'https://api.growthpush.com/1/trials' +
-    //            '?token=' + getSubscriptionId(subscription) +
-    //            '&applicationId=' + _config['applicationId'] +
-    //            '&secret=' + _config['credentialId'];
-    //
-    //        return Promise.resolve(url);
-    //    });
-    //}).then((url) => {
-    //    return self.fetch(url).then((res:Response) => {
-    //        if (res.status !== 200) return Promise.reject('Status code isn\'t 200');
-    //        return Promise.resolve(res);
-    //    });
-    //}).then((res:Response) => {
-    //    return res.json().then((data:any) => {
-    //        return Promise.resolve(data);
-    //    });
-    //}).then((data:any) => {
-    //    var hash = (data.extra == null) ? '' : '#' + encodeURIComponent(data.extra);
-    //
-    //    return self.registration.showNotification(_config['title'], {
-    //        icon: _config['icon'] + hash,
-    //        body: data.text,
-    //        tag: 'growthpush-trialId=' + data.trialId,
-    //        vibrate: data.sound ? 1000 : 0,
-    //        //silent: !data.sound
-    //    });
-    //}).catch((err) => {
-    //    console.log(err);
-    //});
 }
 function handleNotificationClick(event) {
     event.notification.close();
@@ -115,7 +98,11 @@ function handleNotificationClick(event) {
     });
 }
 function sendClientEvent() {
-    return getConfig().then(function (config) {
+    return IDBHelper.open().then(function () {
+        return IDBHelper.get('config').then(function (result) {
+            return Promise.resolve(result);
+        });
+    }).then(function (config) {
         return self.fetch('https://api.growthpush.com/1/events', {
             method: 'post',
             headers: {
@@ -140,70 +127,61 @@ function getSubscriptionId(subscription) {
     }
     return subscription.subscriptionId;
 }
-function openStore() {
-    return new Promise(function (resolve, reject) {
-        var req = indexedDB.open(DB_NAME, DB_VERSION);
-        req.onupgradeneeded = function (event) {
-            console.log('DB open: upgradeneeded');
-            var db = event.target.result;
-            if (db.objectStoreNames.contains(DB_STORE_NAME)) {
-                db.deleteObjectStore(DB_STORE_NAME);
-            }
-            db.createObjectStore(DB_STORE_NAME, { keyPath: 'key' });
-        };
-        req.onerror = function (err) {
-            console.log('DB open: error');
-            reject(err);
-        };
-        req.onsuccess = function (event) {
-            console.log('DB open: success');
-            var db = event.target.result;
-            resolve(db);
-        };
-    });
-}
-function setConfig(data) {
-    return openStore().then(function (db) {
-        return new Promise(function (resolve, reject) {
-            var transaction = db.transaction(DB_STORE_NAME, 'readwrite');
-            var store = transaction.objectStore(DB_STORE_NAME);
-            var req = store.put({
-                key: 'config',
-                applicationId: data['applicationId'],
-                credentialId: data['credentialId'],
-                title: data['title'],
-                icon: data['icon'],
-                clickEventName: data['clickEventName'],
-                clientId: data['clientId'],
-                code: data['code']
-            });
+var IDBHelper = (function () {
+    var db = null;
+    var open = function () {
+        var promise = new Promise(function (resolve, reject) {
+            var req = indexedDB.open(DB_NAME, DB_VERSION);
+            req.onupgradeneeded = function (event) {
+                db = event.target.result;
+                //e.target.transaction.onerror = indexedDB.onerror;
+                if (db.objectStoreNames.contains(DB_STORE_NAME)) {
+                    db.deleteObjectStore(DB_STORE_NAME);
+                }
+                db.createObjectStore(DB_STORE_NAME, { keyPath: 'key' });
+            };
             req.onsuccess = function (event) {
-                resolve(event);
+                db = event.target.result;
+                resolve();
             };
             req.onerror = function (err) {
-                reject(err);
+                reject('Couldn not open DB');
             };
         });
-    });
-}
-function getConfig() {
-    return openStore().then(function (db) {
-        return new Promise(function (resolve, reject) {
-            var transaction = db.transaction(DB_STORE_NAME, 'readonly');
-            var store = transaction.objectStore(DB_STORE_NAME);
-            var req = store.get('config');
+        return promise;
+    };
+    var put = function (data) {
+        var tx = db.transaction([DB_STORE_NAME], 'readwrite');
+        var store = tx.objectStore(DB_STORE_NAME);
+        var promise = new Promise(function (resolve, reject) {
+            var req = store.put(data);
+            req.onsuccess = function (event) {
+                resolve();
+            };
+            req.onerror = function (err) {
+                reject('Could not put item');
+            };
+        });
+        return promise;
+    };
+    var get = function (key) {
+        var tx = db.transaction([DB_STORE_NAME], 'readwrite');
+        var store = tx.objectStore(DB_STORE_NAME);
+        var promise = new Promise(function (resolve, reject) {
+            var req = store.get(key);
             req.onsuccess = function (event) {
                 var result = event.target.result;
-                if (result) {
-                    resolve(result);
-                }
-                else {
-                    reject('no data');
-                }
+                resolve(result);
             };
             req.onerror = function (err) {
-                reject(err);
+                reject('Could not get item');
             };
         });
-    });
-}
+        return promise;
+    };
+    return {
+        open: open,
+        put: put,
+        get: get
+    };
+})();
