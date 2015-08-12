@@ -21,13 +21,13 @@ self.addEventListener('message', function (event) {
             });
         }).catch(function (err) {
             event.ports[0].postMessage({
-                error: new Error('Fail initialization: ' + JSON.stringify(err))
+                error: 'Fail initialization: ' + JSON.stringify(err)
             });
         });
     }
     else {
         event.ports[0].postMessage({
-            error: new Error('Unsupported message type: ' + message.type)
+            error: 'Unsupported message type: ' + message.type
         });
     }
 });
