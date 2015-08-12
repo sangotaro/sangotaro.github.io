@@ -43,6 +43,7 @@ function handlePush(event) {
     var _config = null;
     return IDBHelper.open().then(function () {
         return IDBHelper.get('config').then(function (result) {
+            console.log('config:', result);
             _config = result;
         });
     }).then(function () {
@@ -100,6 +101,7 @@ function handleNotificationClick(event) {
 function sendClientEvent() {
     return IDBHelper.open().then(function () {
         return IDBHelper.get('config').then(function (result) {
+            console.log('config:', result);
             return Promise.resolve(result);
         });
     }).then(function (config) {
@@ -145,7 +147,7 @@ var IDBHelper = (function () {
                 resolve();
             };
             req.onerror = function (err) {
-                reject('Couldn not open DB');
+                reject('Could not open DB');
             };
         });
         return promise;
