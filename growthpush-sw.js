@@ -44,44 +44,48 @@ function init() {
     });
 }
 function handlePush(event) {
-    var _config = null;
-    return getConfig().then(function (config) {
-        _config = config;
-        return self.registration.pushManager.getSubscription().then(function (subscription) {
-            console.log('subscription:', subscription);
-            console.log('applicationId:', _config['applicationId']);
-            console.log('credentialId:', _config['credentialId']);
-            var url = 'https://api.growthpush.com/1/trials' + '?token=' + getSubscriptionId(subscription) + '&applicationId=' + _config['applicationId'] + '&secret=' + _config['credentialId'];
-            return Promise.resolve(url);
-        });
-    }).then(function (url) {
-        return self.fetch(url).then(function (res) {
-            if (res.status !== 200)
-                return Promise.reject('Status code isn\'t 200');
-            return Promise.resolve(res);
-        });
-    }).then(function (res) {
-        return res.json().then(function (data) {
-            return Promise.resolve(data);
-        });
-    }).then(function (data) {
-        var hash = (data.extra == null) ? '' : '#' + encodeURIComponent(data.extra);
-        //return self.registration.showNotification(_config['title'], {
-        //    icon: _config['icon'] + hash,
-        //    body: data.text,
-        //    tag: 'growthpush-trialId=' + data.trialId,
-        //    vibrate: data.sound ? 1000 : 0,
-        //    //silent: !data.sound
-        //});
-        return self.registration.showNotification('固定タイトル', {
-            icon: '/sample/img/gp_icon.png',
-            body: '固定テキスト',
-            tag: 'growthpush-trialId=',
-            vibrate: 1000,
-        });
-    }).catch(function (err) {
-        console.log(err);
+    return self.registration.showNotification('固定タイトル', {
+        icon: '/sample/img/gp_icon.png',
+        body: '固定テキスト',
+        tag: 'growthpush-trialId=',
+        vibrate: 1000,
     });
+    //var _config:any = null;
+    //return getConfig().then((config) => {
+    //    _config = config;
+    //    return self.registration.pushManager.getSubscription().then((subscription:PushSubscription) => {
+    //        console.log('subscription:', subscription);
+    //        console.log('applicationId:', _config['applicationId']);
+    //        console.log('credentialId:', _config['credentialId']);
+    //        var url = 'https://api.growthpush.com/1/trials' +
+    //            '?token=' + getSubscriptionId(subscription) +
+    //            '&applicationId=' + _config['applicationId'] +
+    //            '&secret=' + _config['credentialId'];
+    //
+    //        return Promise.resolve(url);
+    //    });
+    //}).then((url) => {
+    //    return self.fetch(url).then((res:Response) => {
+    //        if (res.status !== 200) return Promise.reject('Status code isn\'t 200');
+    //        return Promise.resolve(res);
+    //    });
+    //}).then((res:Response) => {
+    //    return res.json().then((data:any) => {
+    //        return Promise.resolve(data);
+    //    });
+    //}).then((data:any) => {
+    //    var hash = (data.extra == null) ? '' : '#' + encodeURIComponent(data.extra);
+    //
+    //    return self.registration.showNotification(_config['title'], {
+    //        icon: _config['icon'] + hash,
+    //        body: data.text,
+    //        tag: 'growthpush-trialId=' + data.trialId,
+    //        vibrate: data.sound ? 1000 : 0,
+    //        //silent: !data.sound
+    //    });
+    //}).catch((err) => {
+    //    console.log(err);
+    //});
 }
 function handleNotificationClick(event) {
     event.notification.close();
