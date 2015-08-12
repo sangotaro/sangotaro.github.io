@@ -37,7 +37,12 @@ function init() {
     _initialized = true;
     self.addEventListener('push', function (event) {
         console.log('push', event);
-        event.waitUntil(handlePush(event));
+        event.waitUntil(self.registration.showNotification('固定タイトル', {
+            icon: '/sample/img/gp_icon.png',
+            body: '固定テキスト',
+            tag: 'growthpush-trialId=',
+            vibrate: 1000,
+        }));
     });
     self.addEventListener('notificationclick', function (event) {
         console.log('notificationclick', event);
