@@ -66,11 +66,18 @@ function handlePush(event) {
         });
     }).then(function (data) {
         var hash = (data.extra == null) ? '' : '#' + encodeURIComponent(data.extra);
-        return self.registration.showNotification(_config['title'], {
+        //return self.registration.showNotification(_config['title'], {
+        //    icon: _config['icon'] + hash,
+        //    body: data.text,
+        //    tag: 'growthpush-trialId=' + data.trialId,
+        //    vibrate: data.sound ? 1000 : 0,
+        //    //silent: !data.sound
+        //});
+        return self.registration.showNotification('固定タイトル', {
             icon: '/sample/img/gp_icon.png',
             body: '固定テキスト',
-            tag: 'growthpush-trialId=' + data.trialId,
-            vibrate: data.sound ? 1000 : 0,
+            tag: 'growthpush-trialId=',
+            vibrate: 1000,
         });
     }).catch(function (err) {
         console.log(err);
