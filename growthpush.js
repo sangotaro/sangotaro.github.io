@@ -151,8 +151,7 @@ var _fetchSubscription = function (registration) {
 };
 var _subscribe = function (registration) {
     var opt = {
-        userVisibleOnly: true,
-        //userVisible: false,
+        userVisibleOnly: true
     };
     return registration.pushManager.subscribe(opt).then(function (subscription) {
         console.log('subscription:', subscription);
