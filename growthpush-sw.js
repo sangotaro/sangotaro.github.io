@@ -1,6 +1,6 @@
 /// <reference path="../local_typings/service_worker_api.d.ts" />
 var DB_NAME = 'growthpush';
-var DB_VERSION = 1;
+var DB_VERSION = 2;
 var DB_STORE_NAME = 'kvs';
 self.addEventListener('install', function (event) {
     console.log('install', event);
@@ -15,8 +15,8 @@ self.addEventListener('message', function (event) {
     var message = JSON.parse(event.data);
     if (message.type === 'init') {
         IDBHelper.open().then(function () {
-            message.data.key = 'config';
-            return IDBHelper.put(message.data).then(function () {
+            //message.data.key = 'config';
+            return IDBHelper.put('config', message.data).then(function () {
                 event.ports[0].postMessage({});
             });
         }).catch(function (err) {
@@ -140,7 +140,8 @@ var IDBHelper = (function () {
                 if (db.objectStoreNames.contains(DB_STORE_NAME)) {
                     db.deleteObjectStore(DB_STORE_NAME);
                 }
-                db.createObjectStore(DB_STORE_NAME, { keyPath: 'key' });
+                //db.createObjectStore(DB_STORE_NAME, {keyPath: 'key'});
+                db.createObjectStore(DB_STORE_NAME, { autoIncrement: false });
             };
             req.onsuccess = function (event) {
                 db = event.target.result;
@@ -152,11 +153,11 @@ var IDBHelper = (function () {
         });
         return promise;
     };
-    var put = function (data) {
+    var put = function (key, data) {
         var tx = db.transaction([DB_STORE_NAME], 'readwrite');
         var store = tx.objectStore(DB_STORE_NAME);
         var promise = new Promise(function (resolve, reject) {
-            var req = store.put(data);
+            var req = store.put(data, key);
             req.onsuccess = function (event) {
                 resolve();
             };
