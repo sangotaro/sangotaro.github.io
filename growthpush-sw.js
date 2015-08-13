@@ -1,6 +1,6 @@
 /// <reference path="../local_typings/service_worker_api.d.ts" />
 var DB_NAME = 'growthpush';
-var DB_VERSION = 2;
+var DB_VERSION = 1;
 var DB_STORE_NAME = 'kvs';
 self.addEventListener('install', function (event) {
     console.log('install', event);
