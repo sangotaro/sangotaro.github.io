@@ -42,6 +42,9 @@ function handlePush(event) {
     var _config = null;
     return IDBHelper.open().then(function () {
         return IDBHelper.get('config').then(function (result) {
+            if (result == null) {
+                return Promise.reject('Config does not exist');
+            }
             console.log('config:', result);
             _config = result;
         });
@@ -100,6 +103,9 @@ function handleNotificationClick(event) {
 function sendClientEvent() {
     return IDBHelper.open().then(function () {
         return IDBHelper.get('config').then(function (result) {
+            if (result == null) {
+                return Promise.reject('Config does not exist');
+            }
             console.log('config:', result);
             return Promise.resolve(result);
         });
@@ -134,7 +140,7 @@ var IDBHelper = (function () {
         var promise = new Promise(function (resolve, reject) {
             var req = indexedDB.open(DB_NAME, DB_VERSION);
             req.onupgradeneeded = function (event) {
-                console.log('open DB: upgradeneeded');
+                console.log('IDBHelper.open: upgradeneeded');
                 db = event.target.result;
                 //event.target.transaction.onerror = indexedDB.onerror;
                 if (db.objectStoreNames.contains(DB_STORE_NAME)) {
@@ -143,12 +149,12 @@ var IDBHelper = (function () {
                 db.createObjectStore(DB_STORE_NAME, { autoIncrement: false });
             };
             req.onsuccess = function (event) {
-                console.log('open DB: success');
+                console.log('IDBHelper.open: success');
                 db = event.target.result;
                 resolve();
             };
             req.onerror = function (err) {
-                console.log('open DB: err:', err);
+                console.log('IDBHelper.open: err:', err);
                 reject('Could not open DB');
             };
         });
@@ -160,11 +166,11 @@ var IDBHelper = (function () {
         var promise = new Promise(function (resolve, reject) {
             var req = store.put(data, key);
             req.onsuccess = function (event) {
-                console.log('put item: success');
+                console.log('IDBHelper.put: success');
                 resolve();
             };
             req.onerror = function (err) {
-                console.log('put item: error:', err);
+                console.log('IDBHelper.put:', err);
                 reject('Could not put item');
             };
         });
@@ -176,12 +182,12 @@ var IDBHelper = (function () {
         var promise = new Promise(function (resolve, reject) {
             var req = store.get(key);
             req.onsuccess = function (event) {
-                console.log('get item: success');
+                console.log('IDBHelper.get: success');
                 var result = event.target.result;
                 resolve(result);
             };
             req.onerror = function (err) {
-                console.log('get item: err:', err);
+                console.log('IDBHelper.get: err:', err);
                 reject('Could not get item');
             };
         });
