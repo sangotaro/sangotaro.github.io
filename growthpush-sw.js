@@ -15,7 +15,6 @@ self.addEventListener('message', function (event) {
     var message = JSON.parse(event.data);
     if (message.type === 'init') {
         IDBHelper.open().then(function () {
-            //message.data.key = 'config';
             return IDBHelper.put('config', message.data).then(function () {
                 event.ports[0].postMessage({});
             });
@@ -135,19 +134,21 @@ var IDBHelper = (function () {
         var promise = new Promise(function (resolve, reject) {
             var req = indexedDB.open(DB_NAME, DB_VERSION);
             req.onupgradeneeded = function (event) {
+                console.log('open DB: upgradeneeded');
                 db = event.target.result;
-                //e.target.transaction.onerror = indexedDB.onerror;
+                //event.target.transaction.onerror = indexedDB.onerror;
                 if (db.objectStoreNames.contains(DB_STORE_NAME)) {
                     db.deleteObjectStore(DB_STORE_NAME);
                 }
-                //db.createObjectStore(DB_STORE_NAME, {keyPath: 'key'});
                 db.createObjectStore(DB_STORE_NAME, { autoIncrement: false });
             };
             req.onsuccess = function (event) {
+                console.log('open DB: success');
                 db = event.target.result;
                 resolve();
             };
             req.onerror = function (err) {
+                console.log('open DB: err:', err);
                 reject('Could not open DB');
             };
         });
@@ -159,9 +160,11 @@ var IDBHelper = (function () {
         var promise = new Promise(function (resolve, reject) {
             var req = store.put(data, key);
             req.onsuccess = function (event) {
+                console.log('put item: success');
                 resolve();
             };
             req.onerror = function (err) {
+                console.log('put item: error:', err);
                 reject('Could not put item');
             };
         });
@@ -173,10 +176,12 @@ var IDBHelper = (function () {
         var promise = new Promise(function (resolve, reject) {
             var req = store.get(key);
             req.onsuccess = function (event) {
+                console.log('get item: success');
                 var result = event.target.result;
                 resolve(result);
             };
             req.onerror = function (err) {
+                console.log('get item: err:', err);
                 reject('Could not get item');
             };
         });
