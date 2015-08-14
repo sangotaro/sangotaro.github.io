@@ -7,7 +7,7 @@
  *   version: 1.2.0
  * 
  * growthpush-javascript:
- *   version: 1.1.0
+ *   version: 1.1.1
  * 
  * nanoajax:
  *   license: MIT
