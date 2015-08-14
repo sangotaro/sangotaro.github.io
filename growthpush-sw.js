@@ -137,12 +137,13 @@ function getSubscriptionId(subscription) {
 var IDBHelper = (function () {
     var db = null;
     var open = function () {
+        console.log('IDBHelper.open');
         var promise = new Promise(function (resolve, reject) {
             var req = indexedDB.open(DB_NAME, DB_VERSION);
             req.onupgradeneeded = function (event) {
                 console.log('IDBHelper.open: upgradeneeded');
                 db = event.target.result;
-                //event.target.transaction.onerror = indexedDB.onerror;
+                event.target.transaction.onerror = indexedDB.onerror;
                 if (db.objectStoreNames.contains(DB_STORE_NAME)) {
                     db.deleteObjectStore(DB_STORE_NAME);
                 }
@@ -161,6 +162,7 @@ var IDBHelper = (function () {
         return promise;
     };
     var put = function (key, data) {
+        console.log('IDBHelper.put');
         var tx = db.transaction([DB_STORE_NAME], 'readwrite');
         var store = tx.objectStore(DB_STORE_NAME);
         var promise = new Promise(function (resolve, reject) {
@@ -177,6 +179,7 @@ var IDBHelper = (function () {
         return promise;
     };
     var get = function (key) {
+        console.log('IDBHelper.get');
         var tx = db.transaction([DB_STORE_NAME], 'readwrite');
         var store = tx.objectStore(DB_STORE_NAME);
         var promise = new Promise(function (resolve, reject) {
