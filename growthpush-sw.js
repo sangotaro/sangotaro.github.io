@@ -158,6 +158,10 @@ var IDBHelper = (function () {
                 console.log('IDBHelper.open: err:', err);
                 reject('Could not open DB');
             };
+            req.onblocked = function (e) {
+                console.log('IDBHelper.open: blocked');
+                console.log(e);
+            }
         });
         return promise;
     };
