@@ -114,6 +114,7 @@ var HttpClient = require('./http/http-client');
 var HTTP_CLIENT_BASE_URL = 'https://api.growthpush.com/';
 var _httpClient = new HttpClient(HTTP_CLIENT_BASE_URL);
 var _initialized = false;
+var _registered = false;
 var _params = null;
 var _client = null;
 var _fetchRegistration = function () {
@@ -261,18 +262,26 @@ exports.init = init;
 function register() {
     if (!_initialized)
         return;
+    if (!_isAndroid()) {
+        console.warn('Growth Push isn\'t supported in this os.');
+        return;
+    }
     if (!('serviceWorker' in navigator)) {
         console.warn('Service workers aren\'t supported in this browser.');
         return;
     }
     navigator.serviceWorker.register(_params.receiver).then(_fetchRegistration).then(_fetchSubscription).then(_registerClient).then(_configure).then(function (data) {
         console.log('done:', data);
+        _registered = true;
     }).catch(function (err) {
         console.log(err);
-        _initialized = false;
     });
 }
 exports.register = register;
+var _isAndroid = function () {
+    var ua = window.navigator.userAgent.toLowerCase();
+    return (ua.indexOf('android') !== -1);
+};
 // TODO: move to Growthbeat
 var _fetchClient = function (callback) {
     var timerId = setInterval(function () {
@@ -284,7 +293,7 @@ var _fetchClient = function (callback) {
 };
 // TODO: move to Growthbeat
 function tag(name, value) {
-    if (!_initialized)
+    if (!_registered)
         return;
     if (name == null)
         return;
@@ -309,7 +318,7 @@ function tag(name, value) {
 exports.tag = tag;
 // TODO: move to Growthbeat
 function track(name, value) {
-    if (!_initialized)
+    if (!_registered)
         return;
     if (name == null)
         return;
