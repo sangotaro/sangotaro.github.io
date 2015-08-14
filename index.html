@@ -31,7 +31,8 @@ Test
 </script>
 <script src="./reset-storages.js"></script>
 <script>
-    var el = document.addEventListener('click', function() {
+    var el = document.querySelectorAll('#reset');
+    el.addEventListener('click', function() {
         console.log('Reset storages');
         resetStorages();
     });
