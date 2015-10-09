@@ -7,7 +7,7 @@
  *   version: 1.2.0
  * 
  * growthpush-javascript:
- *   version: 1.1.1
+ *   version: 1.1.2
  * 
  * nanoajax:
  *   license: MIT
@@ -107,16 +107,18 @@ var HttpClient = (function () {
 })();
 module.exports = HttpClient;
 
-},{"nanoajax":7}],2:[function(require,module,exports){
+},{"nanoajax":8}],2:[function(require,module,exports){
 var localStorageWrapper = require('../utils/local-storage-wrapper');
 var Client = require('./model/client');
 var HttpClient = require('./http/http-client');
+var Timer = require('../utils/timer');
 var HTTP_CLIENT_BASE_URL = 'https://api.growthpush.com/';
 var _httpClient = new HttpClient(HTTP_CLIENT_BASE_URL);
 var _initialized = false;
 var _registered = false;
 var _params = null;
 var _client = null;
+var _timer = new Timer(1000);
 var _fetchRegistration = function () {
     if (!('showNotification' in ServiceWorkerRegistration.prototype)) {
         return Promise.reject(new Error('Notifications aren\'t supported.'));
@@ -257,6 +259,7 @@ function init(params) {
         throw new Error('GrowthPush: unsupported environment: ' + params.environment);
     }
     _params = params;
+    _timer.start();
 }
 exports.init = init;
 function register() {
@@ -275,6 +278,7 @@ function register() {
         _registered = true;
     }).catch(function (err) {
         console.log(err);
+        _timer.stop();
     });
 }
 exports.register = register;
@@ -284,17 +288,16 @@ var _isAndroid = function () {
 };
 // TODO: move to Growthbeat
 var _fetchClient = function (callback) {
-    var timerId = setInterval(function () {
+    _timer.add(function () {
         if (_client) {
-            clearInterval(timerId);
             callback(_client);
+            return false;
         }
-    }, 500);
+        return true;
+    });
 };
 // TODO: move to Growthbeat
 function tag(name, value) {
-    if (!_registered)
-        return;
     if (name == null)
         return;
     var existingTag = JSON.parse(localStorageWrapper.get('growthpush.tag:' + name));
@@ -318,8 +321,6 @@ function tag(name, value) {
 exports.tag = tag;
 // TODO: move to Growthbeat
 function track(name, value) {
-    if (!_registered)
-        return;
     if (name == null)
         return;
     _fetchClient(function (client) {
@@ -343,7 +344,7 @@ function permitted() {
 }
 exports.permitted = permitted;
 
-},{"../utils/local-storage-wrapper":5,"./http/http-client":1,"./model/client":3}],3:[function(require,module,exports){
+},{"../utils/local-storage-wrapper":5,"../utils/timer":6,"./http/http-client":1,"./model/client":3}],3:[function(require,module,exports){
 var __extends = this.__extends || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
@@ -451,7 +452,7 @@ var Client = (function (_super) {
 })(Emitter);
 module.exports = Client;
 
-},{"../../utils/local-storage-wrapper":5,"../http/http-client":1,"component-emitter":6}],4:[function(require,module,exports){
+},{"../../utils/local-storage-wrapper":5,"../http/http-client":1,"component-emitter":7}],4:[function(require,module,exports){
 ///<reference path="../typings/bundle.d.ts" />
 ///<reference path="../local_typings/service_worker_api.d.ts" />
 ///<reference path='../local_typings/nanoajax.d.ts' />
@@ -478,6 +479,43 @@ function set(name, value) {
 exports.set = set;
 
 },{}],6:[function(require,module,exports){
+var Timer = (function () {
+    function Timer(delay) {
+        this.delay = 1000;
+        this.timerId = 0;
+        this.timers = [];
+        this.delay = delay;
+    }
+    Timer.prototype.add = function (fn) {
+        this.timers.push(fn);
+        return this;
+    };
+    Timer.prototype.start = function () {
+        if (this.timerId)
+            return;
+        var self = this;
+        (function runNext() {
+            if (self.timers.length > 0) {
+                var i;
+                for (i = 0; i < self.timers.length; i++) {
+                    if (self.timers[i]() === false) {
+                        self.timers.splice(i, 1);
+                        i--;
+                    }
+                }
+            }
+            self.timerId = setTimeout(runNext, self.delay);
+        })();
+    };
+    Timer.prototype.stop = function () {
+        clearTimeout(this.timerId);
+        this.timerId = 0;
+    };
+    return Timer;
+})();
+module.exports = Timer;
+
+},{}],7:[function(require,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -640,7 +678,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 (function (global){
 exports.ajax = function (params, callback) {
   if (typeof params == 'string') params = {url: params}
