@@ -68,8 +68,11 @@ function handlePush(event) {
         });
     }).then(function (data) {
         var hash = (data.extra == null) ? '' : '#' + encodeURIComponent(data.extra);
-        return self.registration.showNotification(_config['title'], {
-            icon: _config['icon'] + hash,
+        var extra = JSON.parse(data.extra);
+        var title = (extra.title == null) ? _config['title'] : extra.title;
+        var icon = (extra.icon == null) ? _config['icon'] : extra.icon;
+        return self.registration.showNotification(title, {
+            icon: icon + hash,
             body: data.text,
             tag: 'growthpush-trialId=' + data.trialId,
             vibrate: data.sound ? 1000 : 0,
