@@ -101,9 +101,15 @@ function handleNotificationClick(event) {
         if (self.clients.openWindow) {
             return self.clients.openWindow('/');
         }
+    }).then(function () {
+        return data;
     });
 }
-function sendClientEvent() {
+function sendClientEvent(data) {
+    var launchEventName = '';
+    if ('growthpush' in data && 'notificationId' in data.growthpush) {
+        launchEventName = 'Launch@Notification-' + data.growthpush.notificationId;
+    }
     return IDBHelper.open().then(function () {
         return IDBHelper.get('config').then(function (result) {
             if (result == null) {
@@ -113,13 +119,21 @@ function sendClientEvent() {
             return Promise.resolve(result);
         });
     }).then(function (config) {
-        return self.fetch('https://api.growthpush.com/1/events', {
-            method: 'post',
-            headers: {
-                'Content-type': 'application/x-www-form-urlencoded; charset=UTF-8'
-            },
-            body: 'clientId=' + config['clientId'] + '&code=' + config['code'] + '&name=' + config['clickEventName']
-        });
+        var _body = 'clientId=' + config['clientId'] + '&code=' + config['code'];
+        var fetches = [postEvent(_body + '&name=' + config['clickEventName'])];
+        if (launchEventName !== '') {
+            fetches.push(postEvent(_body + '&name=' + launchEventName));
+        }
+        return Promise.all(fetches);
+    });
+}
+function postEvent(body) {
+    return self.fetch('https://api.growthpush.com/1/events', {
+        method: 'post',
+        headers: {
+            'Content-type': 'application/x-www-form-urlencoded; charset=UTF-8'
+        },
+        body: body
     }).then(function (res) {
         if (res.status !== 200)
             return Promise.reject('Status code isn\'t 200');
