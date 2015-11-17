@@ -20,13 +20,19 @@ Test
             credentialId: 'QZCw2iFcENvof1U9deiJwyzbweiYt23W',
             environment: 'development',
             receiver: '/growthpush-sw.js',
-            appName: 'Test App',
-            icon: '/img/gp_icon.png',
+            appName: 'Growth Push Sample',
+            icon: '/img/notification-icon-192x192.png',
             clickEventName: 'NotificationClick'
         });
         GrowthPush.register();
-        GrowthPush.tag('webTag', 'Chrome');
-        GrowthPush.track('LaunchWeb');
+
+        GrowthPush.on('registered', function() {
+            GrowthPush.tag('TestTag', 'Chrome');
+            GrowthPush.track('LaunchWeb');
+        });
+        GrowthPush.on('error', function() {
+            console.log('error');
+        });
     });
 </script>
 <script src="./reset-storages.js"></script>

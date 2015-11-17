@@ -112,8 +112,10 @@ var localStorageWrapper = require('../utils/local-storage-wrapper');
 var Client = require('./model/client');
 var HttpClient = require('./http/http-client');
 var Timer = require('../utils/timer');
+var Emitter = require('component-emitter');
 var HTTP_CLIENT_BASE_URL = 'https://api.growthpush.com/';
 var _httpClient = new HttpClient(HTTP_CLIENT_BASE_URL);
+var _emitter = new Emitter();
 var _initialized = false;
 var _registered = false;
 var _params = null;
@@ -276,9 +278,11 @@ function register() {
     navigator.serviceWorker.register(_params.receiver).then(_fetchRegistration).then(_fetchSubscription).then(_registerClient).then(_configure).then(function (data) {
         console.log('done:', data);
         _registered = true;
+        _emitter.emit('registered');
     }).catch(function (err) {
         console.log(err);
         _timer.stop();
+        _emitter.emit('error');
     });
 }
 exports.register = register;
@@ -343,8 +347,28 @@ function permitted() {
     return true;
 }
 exports.permitted = permitted;
+function on(event, fn) {
+    _emitter.on(event, fn);
+}
+exports.on = on;
+function once(event, fn) {
+    _emitter.once(event, fn);
+}
+exports.once = once;
+function off(event, fn) {
+    _emitter.off(event, fn);
+}
+exports.off = off;
+function emit(event) {
+    var args = [];
+    for (var _i = 1; _i < arguments.length; _i++) {
+        args[_i - 1] = arguments[_i];
+    }
+    _emitter.emit(event, args);
+}
+exports.emit = emit;
 
-},{"../utils/local-storage-wrapper":5,"../utils/timer":6,"./http/http-client":1,"./model/client":3}],3:[function(require,module,exports){
+},{"../utils/local-storage-wrapper":5,"../utils/timer":6,"./http/http-client":1,"./model/client":3,"component-emitter":7}],3:[function(require,module,exports){
 var __extends = this.__extends || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }

@@ -1,9 +1,9 @@
 {
-  "name": "Growth Push for browser",
-  "short_name": "GrowthPush",
+  "name": "Growth Push for Android Chrome",
+  "short_name": "Growth Push",
   "icons": [{
-    "src": "img/gp_icon.png",
-    "sizes": "256x256",
+    "src": "img/launcher-icon-144x144.png",
+    "sizes": "144x144",
     "type": "image/png"
   }],
   "start_url": "/",

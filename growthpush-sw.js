@@ -68,7 +68,7 @@ function handlePush(event) {
         });
     }).then(function (data) {
         var hash = (data.extra == null) ? '' : '#' + encodeURIComponent(data.extra);
-        var extra = JSON.parse(data.extra);
+        var extra = (data.extra == null) ? {} : JSON.parse(data.extra);
         var title = (extra.title == null) ? _config['title'] : extra.title;
         var icon = (extra.icon == null) ? _config['icon'] : extra.icon;
         return self.registration.showNotification(title, {
