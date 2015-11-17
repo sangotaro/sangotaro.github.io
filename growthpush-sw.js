@@ -36,7 +36,7 @@ self.addEventListener('push', function (event) {
 });
 self.addEventListener('notificationclick', function (event) {
     console.log('notificationclick', event);
-    event.waitUntil(handleNotificationClick(event).then(sendClientEvent));
+    event.waitUntil(handleNotificationClick(event));
 });
 function handlePush(event) {
     var _config = null;
@@ -87,6 +87,9 @@ function handleNotificationClick(event) {
     var matches = event.notification.icon.match(/#(.+)/);
     if (matches != null && matches.length > 1)
         data = JSON.parse(decodeURIComponent(matches[1]));
+    return Promise.all([openWindow(data), sendClientEvent(data)]);
+}
+function openWindow(data) {
     if (self.clients.openWindow) {
         if ('url' in data)
             return self.clients.openWindow(data['url']);
@@ -101,13 +104,11 @@ function handleNotificationClick(event) {
         if (self.clients.openWindow) {
             return self.clients.openWindow('/');
         }
-    }).then(function () {
-        return data;
     });
 }
 function sendClientEvent(data) {
     var launchEventName = '';
-    if (data.growthpush != null && data.growthpush.notificationId != null) {
+    if ('growthpush' in data && 'notificationId' in data.growthpush) {
         launchEventName = 'Launch@Notification-' + data.growthpush.notificationId;
     }
     return IDBHelper.open().then(function () {
