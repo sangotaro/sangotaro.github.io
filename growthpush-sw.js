@@ -107,7 +107,7 @@ function handleNotificationClick(event) {
 }
 function sendClientEvent(data) {
     var launchEventName = '';
-    if ('growthpush' in data && 'notificationId' in data.growthpush) {
+    if (data.growthpush != null && data.growthpush.notificationId != null) {
         launchEventName = 'Launch@Notification-' + data.growthpush.notificationId;
     }
     return IDBHelper.open().then(function () {
