@@ -1,7 +1,11 @@
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 /// <reference path="../local_typings/service_worker_api.d.ts" />
+var indexeddb_wrapper_1 = require('./utils/indexeddb-wrapper');
 var DB_NAME = 'growthpush';
 var DB_VERSION = 1;
-var DB_STORE_NAME = 'kvs';
+var idbWrapper = new indexeddb_wrapper_1.default(DB_NAME, DB_VERSION, [
+    { name: 'kvs' }
+]);
 self.addEventListener('install', function (event) {
     console.log('install', event);
     event.waitUntil(self.skipWaiting());
@@ -9,26 +13,6 @@ self.addEventListener('install', function (event) {
 self.addEventListener('activate', function (event) {
     console.log('activate', event);
     event.waitUntil(self.clients.claim());
-});
-self.addEventListener('message', function (event) {
-    console.log('message', event);
-    var message = JSON.parse(event.data);
-    if (message.type === 'init') {
-        IDBHelper.open().then(function () {
-            return IDBHelper.put('config', message.data).then(function () {
-                event.ports[0].postMessage({});
-            });
-        }).catch(function (err) {
-            event.ports[0].postMessage({
-                error: 'Fail initialization: ' + JSON.stringify(err)
-            });
-        });
-    }
-    else {
-        event.ports[0].postMessage({
-            error: 'Unsupported message type: ' + message.type
-        });
-    }
 });
 self.addEventListener('push', function (event) {
     console.log('push', event);
@@ -40,8 +24,8 @@ self.addEventListener('notificationclick', function (event) {
 });
 function handlePush(event) {
     var _config = null;
-    return IDBHelper.open().then(function () {
-        return IDBHelper.get('config').then(function (result) {
+    return idbWrapper.open().then(function () {
+        return idbWrapper.get('kvs', 'config').then(function (result) {
             if (result == null) {
                 return Promise.reject('Config does not exist');
             }
@@ -53,7 +37,10 @@ function handlePush(event) {
             console.log('subscription:', subscription);
             console.log('applicationId:', _config['applicationId']);
             console.log('credentialId:', _config['credentialId']);
-            var url = 'https://api.growthpush.com/1/trials' + '?token=' + getSubscriptionId(subscription) + '&applicationId=' + _config['applicationId'] + '&secret=' + _config['credentialId'];
+            var url = 'https://api.growthpush.com/1/trials' +
+                '?token=' + getSubscriptionId(subscription) +
+                '&applicationId=' + _config['applicationId'] +
+                '&secret=' + _config['credentialId'];
             return Promise.resolve(url);
         });
     }).then(function (url) {
@@ -111,8 +98,8 @@ function sendClientEvent(data) {
     if ('growthpush' in data && 'notificationId' in data.growthpush) {
         launchEventName = 'Launch@Notification-' + data.growthpush.notificationId;
     }
-    return IDBHelper.open().then(function () {
-        return IDBHelper.get('config').then(function (result) {
+    return idbWrapper.open().then(function () {
+        return idbWrapper.get('kvs', 'config').then(function (result) {
             if (result == null) {
                 return Promise.reject('Config does not exist');
             }
@@ -122,7 +109,7 @@ function sendClientEvent(data) {
     }).then(function (config) {
         var _body = 'clientId=' + config['clientId'] + '&code=' + config['code'];
         var fetches = [postEvent(_body + '&name=' + config['clickEventName'])];
-        if (launchEventName !== '') {
+        if (launchEventName !== '' && config['isDetailEvent']) {
             fetches.push(postEvent(_body + '&name=' + launchEventName));
         }
         return Promise.all(fetches);
@@ -152,71 +139,85 @@ function getSubscriptionId(subscription) {
     }
     return subscription.subscriptionId;
 }
-var IDBHelper = (function () {
-    var db = null;
-    var open = function () {
-        var promise = new Promise(function (resolve, reject) {
-            console.log('IDBHelper.open');
-            var req = indexedDB.open(DB_NAME, DB_VERSION);
+
+},{"./utils/indexeddb-wrapper":2}],2:[function(require,module,exports){
+var IDBWrapper = (function () {
+    function IDBWrapper(dbName, dbVersion, stores) {
+        this.db = null;
+        this.dbName = dbName;
+        this.dbVersion = dbVersion;
+        this.stores = stores;
+    }
+    IDBWrapper.prototype.open = function () {
+        var _this = this;
+        return new Promise(function (resolve, reject) {
+            console.log('IDBWrapper#open', _this.dbName + '@' + _this.dbVersion);
+            if (_this.db != null) {
+                console.log('IDBWrapper#open', _this.dbName + '@' + _this.dbVersion + 'is already open');
+                return resolve();
+            }
+            var req = indexedDB.open(_this.dbName, _this.dbVersion);
             req.onupgradeneeded = function (event) {
-                console.log('IDBHelper.open: upgradeneeded');
-                db = event.target.result;
-                //event.target.transaction.onerror = indexedDB.onerror;
-                if (db.objectStoreNames.contains(DB_STORE_NAME)) {
-                    db.deleteObjectStore(DB_STORE_NAME);
-                }
-                db.createObjectStore(DB_STORE_NAME, { autoIncrement: false });
+                console.log('IDBWrapper#open: upgradeneeded');
+                var db = event.target.result;
+                _this.stores.forEach(function (store) {
+                    if (db.objectStoreNames.contains(store.name)) {
+                        db.deleteObjectStore(store.name);
+                    }
+                    db.createObjectStore(store.name, { autoIncrement: false });
+                });
             };
             req.onsuccess = function (event) {
-                console.log('IDBHelper.open: success');
-                db = event.target.result;
+                console.log('IDBWrapper#open: success');
+                _this.db = event.target.result;
                 resolve();
             };
             req.onerror = function (err) {
-                console.log('IDBHelper.open: err:', err);
+                console.log('IDBWrapper#open: err:', err);
                 reject('Could not open DB');
             };
         });
-        return promise;
     };
-    var put = function (key, data) {
-        console.log('IDBHelper.put');
-        var tx = db.transaction([DB_STORE_NAME], 'readwrite');
-        var store = tx.objectStore(DB_STORE_NAME);
-        var promise = new Promise(function (resolve, reject) {
+    IDBWrapper.prototype.put = function (storeName, key, data) {
+        console.log('IDBHelper#put');
+        if (this.db == null)
+            return Promise.reject(new Error('DB: ' + this.dbName + ' is not open'));
+        var tx = this.db.transaction([storeName], 'readwrite');
+        var store = tx.objectStore(storeName);
+        return new Promise(function (resolve, reject) {
             var req = store.put(data, key);
             req.onsuccess = function (event) {
-                console.log('IDBHelper.put: success');
+                console.log('IDBWrapper#put: success');
                 resolve();
             };
             req.onerror = function (err) {
-                console.log('IDBHelper.put:', err);
+                console.log('IDBWrapper#put:', err);
                 reject('Could not put item');
             };
         });
-        return promise;
     };
-    var get = function (key) {
-        console.log('IDBHelper.get');
-        var tx = db.transaction([DB_STORE_NAME], 'readwrite');
-        var store = tx.objectStore(DB_STORE_NAME);
-        var promise = new Promise(function (resolve, reject) {
+    IDBWrapper.prototype.get = function (storeName, key) {
+        console.log('IDBWrapper#get');
+        if (this.db == null)
+            return Promise.reject(new Error('DB: ' + this.dbName + ' is not open'));
+        var tx = this.db.transaction([storeName], 'readwrite');
+        var store = tx.objectStore(storeName);
+        return new Promise(function (resolve, reject) {
             var req = store.get(key);
             req.onsuccess = function (event) {
-                console.log('IDBHelper.get: success');
+                console.log('IDBWrapper#get: success');
                 var result = event.target.result;
                 resolve(result);
             };
             req.onerror = function (err) {
-                console.log('IDBHelper.get: err:', err);
+                console.log('IDBWrapper#get: err:', err);
                 reject('Could not get item');
             };
         });
-        return promise;
     };
-    return {
-        open: open,
-        put: put,
-        get: get
-    };
+    return IDBWrapper;
 })();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = IDBWrapper;
+
+},{}]},{},[1]);

@@ -1,10 +1,11 @@
 /**
  * Modules in this bundle
  * 
- * component-emitter:
+ * eventemitter3:
  *   license: MIT
- *   maintainers: tootallnate <nathan@tootallnate.net>, tjholowaychuk <tj@vision-media.ca>, rauchg <rauchg@gmail.com>, retrofox <rdsuarez@gmail.com>, coreh <thecoreh@gmail.com>, forbeslindesay <forbes@lindesay.co.uk>, kelonye <kelonyemitchel@gmail.com>, mattmueller <mattmuelle@gmail.com>, yields <yields@icloud.com>, anthonyshort <antshort@gmail.com>, jongleberry <jonathanrichardong@gmail.com>, ianstormtaylor <ian@ianstormtaylor.com>, cristiandouce <cristian@gravityonmars.com>, swatinem <arpad.borsos@googlemail.com>, stagas <gstagas@gmail.com>, amasad <amjad.masad@gmail.com>, juliangruber <julian@juliangruber.com>, shtylman <shtylman@gmail.com>, calvinfo <calvin@calv.info>, dominicbarnes <dominic@dbarnes.info>, blakeembrey <hello@blakeembrey.com>, timoxley <secoif@gmail.com>, jonathanong <jonathanrichardong@gmail.com>, queckezz <fabian.eichenberger@gmail.com>, nami-doc <vendethiel@hotmail.fr>, clintwood <clint@anotherway.co.za>, thehydroimpulse <dnfagnan@gmail.com>, stephenmathieson <me@stephenmathieson.com>, trevorgerhardt <trevorgerhardt@gmail.com>, timaschew <timaschew@gmail.com>, hughsk <hughskennedy@gmail.com>
- *   version: 1.2.0
+ *   author: Arnout Kazemier
+ *   maintainers: v1 <npm@3rd-Eden.com>, 3rdeden <npm@3rd-Eden.com>, lpinca <luigipinca@gmail.com>
+ *   version: 1.1.1
  * 
  * growthpush-javascript:
  *   version: 1.1.3
@@ -105,22 +106,23 @@ var HttpClient = (function () {
     };
     return HttpClient;
 })();
-module.exports = HttpClient;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = HttpClient;
 
-},{"nanoajax":8}],2:[function(require,module,exports){
-var localStorageWrapper = require('../utils/local-storage-wrapper');
-var Client = require('./model/client');
-var HttpClient = require('./http/http-client');
-var Timer = require('../utils/timer');
-var Emitter = require('component-emitter');
-var HTTP_CLIENT_BASE_URL = 'https://api.growthpush.com/';
-var _httpClient = new HttpClient(HTTP_CLIENT_BASE_URL);
-var _emitter = new Emitter();
+},{"nanoajax":9}],2:[function(require,module,exports){
+var indexeddb_wrapper_1 = require('../utils/indexeddb-wrapper');
+var local_storage_wrapper_1 = require('../utils/local-storage-wrapper');
+var client_1 = require('./model/client');
+var http_client_1 = require('./http/http-client');
+var timer_1 = require('../utils/timer');
+var EventEmitter3 = require('eventemitter3');
+var _httpClient = new http_client_1.default('https://api.growthpush.com/');
+var _emitter = new EventEmitter3();
 var _initialized = false;
 var _registered = false;
 var _params = null;
 var _client = null;
-var _timer = new Timer(1000);
+var _timer = new timer_1.default(300);
 var _fetchRegistration = function () {
     if (!('showNotification' in ServiceWorkerRegistration.prototype)) {
         return Promise.reject(new Error('Notifications aren\'t supported.'));
@@ -168,9 +170,10 @@ var _subscribe = function (registration) {
     });
 };
 var _registerClient = function (subscription) {
-    var client = Client.load();
+    var client = client_1.default.load();
     if (client != null && client.getApplicationId() === _params.applicationId) {
-        if (client.getToken() === _getSubscriptionId(subscription) && client.getEnvironment() === _params.environment) {
+        if (client.getToken() === _getSubscriptionId(subscription) &&
+            client.getEnvironment() === _params.environment) {
             _client = client;
             return Promise.resolve({ client: client, subscription: subscription });
         }
@@ -180,7 +183,7 @@ var _registerClient = function (subscription) {
 };
 var _createClient = function (subscription) {
     return new Promise(function (resolve, reject) {
-        var c = Client.create({
+        var c = client_1.default.create({
             applicationId: _params.applicationId,
             credentialId: _params.credentialId,
             environment: _params.environment,
@@ -188,7 +191,7 @@ var _createClient = function (subscription) {
         });
         c.on('created', function () {
             _client = c;
-            Client.save(c);
+            client_1.default.save(c);
             resolve({ client: c, subscription: subscription });
         });
         c.on('error', function () {
@@ -198,14 +201,14 @@ var _createClient = function (subscription) {
 };
 var _updateClient = function (client, subscription) {
     return new Promise(function (resolve, reject) {
-        var c = Client.update(client, {
+        var c = client_1.default.update(client, {
             code: client.getCode(),
             token: _getSubscriptionId(subscription),
             environment: _params.environment
         });
         c.on('updated', function () {
             _client = c;
-            Client.save(c);
+            client_1.default.save(c);
             resolve({ client: c, subscription: subscription });
         });
         c.on('error', function () {
@@ -214,34 +217,22 @@ var _updateClient = function (client, subscription) {
     });
 };
 var _configure = function (params) {
-    return _sendMessage({
-        type: 'init',
-        data: {
+    var idbWrapper = new indexeddb_wrapper_1.default('growthpush', 1, [
+        { name: 'kvs' }
+    ]);
+    return idbWrapper.open().then(function () {
+        return idbWrapper.put('kvs', 'config', {
             applicationId: _params.applicationId,
             credentialId: _params.credentialId,
             title: _params.appName,
             icon: _params.icon,
             clickEventName: _params.clickEventName,
+            isDetailEvent: _params.isDetailEvent,
             clientId: params.client.getId(),
             code: params.client.getCode()
-        }
-    });
-};
-var _sendMessage = function (message) {
-    return new Promise(function (resolve, reject) {
-        var _message = JSON.stringify(message);
-        var messageChannel = new MessageChannel();
-        messageChannel.port1.onmessage = function (event) {
-            console.log('message', event);
-            if (event.data.error) {
-                reject(event.data.error);
-            }
-            else {
-                resolve(event.data);
-            }
-        };
-        console.log('postMessage', message);
-        navigator.serviceWorker.controller.postMessage(_message, [messageChannel.port2]);
+        });
+    }).catch(function (err) {
+        return Promise.reject(new Error('DB configure failed'));
     });
 };
 // 'PushSubscription.subscriptionId' is deprecated
@@ -256,10 +247,12 @@ function init(params) {
         return;
     _initialized = true;
     if (params.environment == null)
-        params.environment = 'production';
+        params.environment = 'development';
     if (params.environment !== 'development' && params.environment !== 'production') {
         throw new Error('GrowthPush: unsupported environment: ' + params.environment);
     }
+    if (params.isDetailEvent == null)
+        params.isDetailEvent = false;
     _params = params;
     _timer.start();
 }
@@ -275,13 +268,29 @@ function register() {
         console.warn('Service workers aren\'t supported in this browser.');
         return;
     }
-    navigator.serviceWorker.register(_params.receiver).then(_fetchRegistration).then(_fetchSubscription).then(_registerClient).then(_configure).then(function (data) {
+    if (!('Notification' in window)) {
+        console.warn('Notification API aren\'t supported in this browser.');
+        return;
+    }
+    if (!('indexedDB' in window)) {
+        console.warn('indexedDB API aren\'t supported in this browser.');
+        return;
+    }
+    navigator.serviceWorker.register(_params.receiver)
+        .then(_fetchRegistration)
+        .then(_fetchSubscription)
+        .then(_registerClient)
+        .then(_configure)
+        .then(function (data) {
         console.log('done:', data);
         _registered = true;
         _emitter.emit('registered');
-    }).catch(function (err) {
+    })
+        .catch(function (err) {
         console.log(err);
-        _timer.stop();
+        if (Notification.permission === 'denied') {
+            _timer.stop();
+        }
         _emitter.emit('error');
     });
 }
@@ -302,11 +311,18 @@ var _fetchClient = function (callback) {
 };
 // TODO: move to Growthbeat
 function tag(name, value) {
+    if (!('Notification' in window))
+        return;
+    if (!('indexedDB' in window))
+        return;
+    if (Notification.permission === 'denied')
+        return;
     if (name == null)
         return;
-    var existingTag = JSON.parse(localStorageWrapper.get('growthpush.tag:' + name));
+    var existingTag = JSON.parse(local_storage_wrapper_1.default.get('growthpush.tag:' + name));
     if (existingTag) {
-        if (existingTag.value === value || (existingTag.value == null && (value === '' || value == null))) {
+        if (existingTag.value === value ||
+            (existingTag.value == null && (value === '' || value == null))) {
             return;
         }
     }
@@ -316,7 +332,7 @@ function tag(name, value) {
             params.value = value;
         _httpClient.post('1/tags', { params: params }, function (data, code) {
             console.log(data);
-            localStorageWrapper.set('growthpush.tag:' + name, JSON.stringify(data));
+            local_storage_wrapper_1.default.set('growthpush.tag:' + name, JSON.stringify(data));
         }, function (err, code) {
             console.log(err);
         });
@@ -325,6 +341,12 @@ function tag(name, value) {
 exports.tag = tag;
 // TODO: move to Growthbeat
 function track(name, value) {
+    if (!('Notification' in window))
+        return;
+    if (!('indexedDB' in window))
+        return;
+    if (Notification.permission === 'denied')
+        return;
     if (name == null)
         return;
     _fetchClient(function (client) {
@@ -342,6 +364,10 @@ exports.track = track;
 function permitted() {
     if (!('serviceWorker' in navigator))
         return false;
+    if (!('Notification' in window))
+        return false;
+    if (!('indexedDB' in window))
+        return;
     if (Notification.permission !== 'granted')
         return false;
     return true;
@@ -368,18 +394,16 @@ function emit(event) {
 }
 exports.emit = emit;
 
-},{"../utils/local-storage-wrapper":5,"../utils/timer":6,"./http/http-client":1,"./model/client":3,"component-emitter":7}],3:[function(require,module,exports){
-var __extends = this.__extends || function (d, b) {
+},{"../utils/indexeddb-wrapper":5,"../utils/local-storage-wrapper":6,"../utils/timer":7,"./http/http-client":1,"./model/client":3,"eventemitter3":8}],3:[function(require,module,exports){
+var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
-    __.prototype = b.prototype;
-    d.prototype = new __();
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-var localStorageWrapper = require('../../utils/local-storage-wrapper');
-var HttpClient = require('../http/http-client');
-var Emitter = require('component-emitter');
-var HTTP_CLIENT_BASE_URL = 'https://api.growthpush.com/';
-var _httpClient = new HttpClient(HTTP_CLIENT_BASE_URL);
+var local_storage_wrapper_1 = require('../../utils/local-storage-wrapper');
+var http_client_1 = require('../http/http-client');
+var EventEmitter3 = require('eventemitter3');
+var _httpClient = new http_client_1.default('https://api.growthpush.com/');
 var Client = (function (_super) {
     __extends(Client, _super);
     function Client(data) {
@@ -399,7 +423,7 @@ var Client = (function (_super) {
         this.created = data.created;
     };
     Client.load = function () {
-        var clientData = localStorageWrapper.get('growthpush.client');
+        var clientData = local_storage_wrapper_1.default.get('growthpush.client');
         if (clientData == null)
             return null;
         return new Client(JSON.parse(clientData));
@@ -419,7 +443,7 @@ var Client = (function (_super) {
             created: data.created
         };
         console.log("save client " + JSON.stringify(_data));
-        localStorageWrapper.set('growthpush.client', JSON.stringify(_data));
+        local_storage_wrapper_1.default.set('growthpush.client', JSON.stringify(_data));
     };
     Client.create = function (params) {
         var opt = {
@@ -473,18 +497,98 @@ var Client = (function (_super) {
         return this.code;
     };
     return Client;
-})(Emitter);
-module.exports = Client;
+})(EventEmitter3);
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = Client;
 
-},{"../../utils/local-storage-wrapper":5,"../http/http-client":1,"component-emitter":7}],4:[function(require,module,exports){
+},{"../../utils/local-storage-wrapper":6,"../http/http-client":1,"eventemitter3":8}],4:[function(require,module,exports){
 ///<reference path="../typings/bundle.d.ts" />
 ///<reference path="../local_typings/service_worker_api.d.ts" />
 ///<reference path='../local_typings/nanoajax.d.ts' />
-///<reference path='../local_typings/component-emitter.d.ts' />
 var GrowthPush = require('./growthpush/index');
 module.exports = GrowthPush;
 
 },{"./growthpush/index":2}],5:[function(require,module,exports){
+var IDBWrapper = (function () {
+    function IDBWrapper(dbName, dbVersion, stores) {
+        this.db = null;
+        this.dbName = dbName;
+        this.dbVersion = dbVersion;
+        this.stores = stores;
+    }
+    IDBWrapper.prototype.open = function () {
+        var _this = this;
+        return new Promise(function (resolve, reject) {
+            console.log('IDBWrapper#open', _this.dbName + '@' + _this.dbVersion);
+            if (_this.db != null) {
+                console.log('IDBWrapper#open', _this.dbName + '@' + _this.dbVersion + 'is already open');
+                return resolve();
+            }
+            var req = indexedDB.open(_this.dbName, _this.dbVersion);
+            req.onupgradeneeded = function (event) {
+                console.log('IDBWrapper#open: upgradeneeded');
+                var db = event.target.result;
+                _this.stores.forEach(function (store) {
+                    if (db.objectStoreNames.contains(store.name)) {
+                        db.deleteObjectStore(store.name);
+                    }
+                    db.createObjectStore(store.name, { autoIncrement: false });
+                });
+            };
+            req.onsuccess = function (event) {
+                console.log('IDBWrapper#open: success');
+                _this.db = event.target.result;
+                resolve();
+            };
+            req.onerror = function (err) {
+                console.log('IDBWrapper#open: err:', err);
+                reject('Could not open DB');
+            };
+        });
+    };
+    IDBWrapper.prototype.put = function (storeName, key, data) {
+        console.log('IDBHelper#put');
+        if (this.db == null)
+            return Promise.reject(new Error('DB: ' + this.dbName + ' is not open'));
+        var tx = this.db.transaction([storeName], 'readwrite');
+        var store = tx.objectStore(storeName);
+        return new Promise(function (resolve, reject) {
+            var req = store.put(data, key);
+            req.onsuccess = function (event) {
+                console.log('IDBWrapper#put: success');
+                resolve();
+            };
+            req.onerror = function (err) {
+                console.log('IDBWrapper#put:', err);
+                reject('Could not put item');
+            };
+        });
+    };
+    IDBWrapper.prototype.get = function (storeName, key) {
+        console.log('IDBWrapper#get');
+        if (this.db == null)
+            return Promise.reject(new Error('DB: ' + this.dbName + ' is not open'));
+        var tx = this.db.transaction([storeName], 'readwrite');
+        var store = tx.objectStore(storeName);
+        return new Promise(function (resolve, reject) {
+            var req = store.get(key);
+            req.onsuccess = function (event) {
+                console.log('IDBWrapper#get: success');
+                var result = event.target.result;
+                resolve(result);
+            };
+            req.onerror = function (err) {
+                console.log('IDBWrapper#get: err:', err);
+                reject('Could not get item');
+            };
+        });
+    };
+    return IDBWrapper;
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = IDBWrapper;
+
+},{}],6:[function(require,module,exports){
 function get(name) {
     if (!window.localStorage)
         return null;
@@ -501,8 +605,13 @@ function set(name, value) {
     }
 }
 exports.set = set;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = {
+    get: get,
+    set: set
+};
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 var Timer = (function () {
     function Timer(delay) {
         this.delay = 1000;
@@ -537,172 +646,274 @@ var Timer = (function () {
     };
     return Timer;
 })();
-module.exports = Timer;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = Timer;
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
+'use strict';
+
+//
+// We store our EE objects in a plain object whose properties are event names.
+// If `Object.create(null)` is not supported we prefix the event names with a
+// `~` to make sure that the built-in object properties are not overridden or
+// used as an attack vector.
+// We also assume that `Object.create(null)` is available when the event name
+// is an ES6 Symbol.
+//
+var prefix = typeof Object.create !== 'function' ? '~' : false;
 
 /**
- * Expose `Emitter`.
- */
-
-module.exports = Emitter;
-
-/**
- * Initialize a new `Emitter`.
+ * Representation of a single EventEmitter function.
  *
- * @api public
- */
-
-function Emitter(obj) {
-  if (obj) return mixin(obj);
-};
-
-/**
- * Mixin the emitter properties.
- *
- * @param {Object} obj
- * @return {Object}
+ * @param {Function} fn Event handler to be called.
+ * @param {Mixed} context Context for function execution.
+ * @param {Boolean} once Only emit once
  * @api private
  */
-
-function mixin(obj) {
-  for (var key in Emitter.prototype) {
-    obj[key] = Emitter.prototype[key];
-  }
-  return obj;
+function EE(fn, context, once) {
+  this.fn = fn;
+  this.context = context;
+  this.once = once || false;
 }
 
 /**
- * Listen on the given `event` with `fn`.
+ * Minimal EventEmitter interface that is molded against the Node.js
+ * EventEmitter interface.
  *
- * @param {String} event
- * @param {Function} fn
- * @return {Emitter}
+ * @constructor
  * @api public
  */
+function EventEmitter() { /* Nothing to set */ }
 
-Emitter.prototype.on =
-Emitter.prototype.addEventListener = function(event, fn){
-  this._callbacks = this._callbacks || {};
-  (this._callbacks['$' + event] = this._callbacks['$' + event] || [])
-    .push(fn);
-  return this;
+/**
+ * Holds the assigned EventEmitters by name.
+ *
+ * @type {Object}
+ * @private
+ */
+EventEmitter.prototype._events = undefined;
+
+/**
+ * Return a list of assigned event listeners.
+ *
+ * @param {String} event The events that should be listed.
+ * @param {Boolean} exists We only need to know if there are listeners.
+ * @returns {Array|Boolean}
+ * @api public
+ */
+EventEmitter.prototype.listeners = function listeners(event, exists) {
+  var evt = prefix ? prefix + event : event
+    , available = this._events && this._events[evt];
+
+  if (exists) return !!available;
+  if (!available) return [];
+  if (available.fn) return [available.fn];
+
+  for (var i = 0, l = available.length, ee = new Array(l); i < l; i++) {
+    ee[i] = available[i].fn;
+  }
+
+  return ee;
 };
 
 /**
- * Adds an `event` listener that will be invoked a single
- * time then automatically removed.
+ * Emit an event to all registered event listeners.
  *
- * @param {String} event
- * @param {Function} fn
- * @return {Emitter}
+ * @param {String} event The name of the event.
+ * @returns {Boolean} Indication if we've emitted an event.
  * @api public
  */
+EventEmitter.prototype.emit = function emit(event, a1, a2, a3, a4, a5) {
+  var evt = prefix ? prefix + event : event;
 
-Emitter.prototype.once = function(event, fn){
-  function on() {
-    this.off(event, on);
-    fn.apply(this, arguments);
-  }
+  if (!this._events || !this._events[evt]) return false;
 
-  on.fn = fn;
-  this.on(event, on);
-  return this;
-};
+  var listeners = this._events[evt]
+    , len = arguments.length
+    , args
+    , i;
 
-/**
- * Remove the given callback for `event` or all
- * registered callbacks.
- *
- * @param {String} event
- * @param {Function} fn
- * @return {Emitter}
- * @api public
- */
+  if ('function' === typeof listeners.fn) {
+    if (listeners.once) this.removeListener(event, listeners.fn, undefined, true);
 
-Emitter.prototype.off =
-Emitter.prototype.removeListener =
-Emitter.prototype.removeAllListeners =
-Emitter.prototype.removeEventListener = function(event, fn){
-  this._callbacks = this._callbacks || {};
-
-  // all
-  if (0 == arguments.length) {
-    this._callbacks = {};
-    return this;
-  }
-
-  // specific event
-  var callbacks = this._callbacks['$' + event];
-  if (!callbacks) return this;
-
-  // remove all handlers
-  if (1 == arguments.length) {
-    delete this._callbacks['$' + event];
-    return this;
-  }
-
-  // remove specific handler
-  var cb;
-  for (var i = 0; i < callbacks.length; i++) {
-    cb = callbacks[i];
-    if (cb === fn || cb.fn === fn) {
-      callbacks.splice(i, 1);
-      break;
+    switch (len) {
+      case 1: return listeners.fn.call(listeners.context), true;
+      case 2: return listeners.fn.call(listeners.context, a1), true;
+      case 3: return listeners.fn.call(listeners.context, a1, a2), true;
+      case 4: return listeners.fn.call(listeners.context, a1, a2, a3), true;
+      case 5: return listeners.fn.call(listeners.context, a1, a2, a3, a4), true;
+      case 6: return listeners.fn.call(listeners.context, a1, a2, a3, a4, a5), true;
     }
-  }
-  return this;
-};
 
-/**
- * Emit `event` with the given args.
- *
- * @param {String} event
- * @param {Mixed} ...
- * @return {Emitter}
- */
+    for (i = 1, args = new Array(len -1); i < len; i++) {
+      args[i - 1] = arguments[i];
+    }
 
-Emitter.prototype.emit = function(event){
-  this._callbacks = this._callbacks || {};
-  var args = [].slice.call(arguments, 1)
-    , callbacks = this._callbacks['$' + event];
+    listeners.fn.apply(listeners.context, args);
+  } else {
+    var length = listeners.length
+      , j;
 
-  if (callbacks) {
-    callbacks = callbacks.slice(0);
-    for (var i = 0, len = callbacks.length; i < len; ++i) {
-      callbacks[i].apply(this, args);
+    for (i = 0; i < length; i++) {
+      if (listeners[i].once) this.removeListener(event, listeners[i].fn, undefined, true);
+
+      switch (len) {
+        case 1: listeners[i].fn.call(listeners[i].context); break;
+        case 2: listeners[i].fn.call(listeners[i].context, a1); break;
+        case 3: listeners[i].fn.call(listeners[i].context, a1, a2); break;
+        default:
+          if (!args) for (j = 1, args = new Array(len -1); j < len; j++) {
+            args[j - 1] = arguments[j];
+          }
+
+          listeners[i].fn.apply(listeners[i].context, args);
+      }
     }
   }
 
+  return true;
+};
+
+/**
+ * Register a new EventListener for the given event.
+ *
+ * @param {String} event Name of the event.
+ * @param {Functon} fn Callback function.
+ * @param {Mixed} context The context of the function.
+ * @api public
+ */
+EventEmitter.prototype.on = function on(event, fn, context) {
+  var listener = new EE(fn, context || this)
+    , evt = prefix ? prefix + event : event;
+
+  if (!this._events) this._events = prefix ? {} : Object.create(null);
+  if (!this._events[evt]) this._events[evt] = listener;
+  else {
+    if (!this._events[evt].fn) this._events[evt].push(listener);
+    else this._events[evt] = [
+      this._events[evt], listener
+    ];
+  }
+
   return this;
 };
 
 /**
- * Return array of callbacks for `event`.
+ * Add an EventListener that's only called once.
  *
- * @param {String} event
- * @return {Array}
+ * @param {String} event Name of the event.
+ * @param {Function} fn Callback function.
+ * @param {Mixed} context The context of the function.
  * @api public
  */
+EventEmitter.prototype.once = function once(event, fn, context) {
+  var listener = new EE(fn, context || this, true)
+    , evt = prefix ? prefix + event : event;
 
-Emitter.prototype.listeners = function(event){
-  this._callbacks = this._callbacks || {};
-  return this._callbacks['$' + event] || [];
+  if (!this._events) this._events = prefix ? {} : Object.create(null);
+  if (!this._events[evt]) this._events[evt] = listener;
+  else {
+    if (!this._events[evt].fn) this._events[evt].push(listener);
+    else this._events[evt] = [
+      this._events[evt], listener
+    ];
+  }
+
+  return this;
 };
 
 /**
- * Check if this emitter has `event` handlers.
+ * Remove event listeners.
  *
- * @param {String} event
- * @return {Boolean}
+ * @param {String} event The event we want to remove.
+ * @param {Function} fn The listener that we need to find.
+ * @param {Mixed} context Only remove listeners matching this context.
+ * @param {Boolean} once Only remove once listeners.
  * @api public
  */
+EventEmitter.prototype.removeListener = function removeListener(event, fn, context, once) {
+  var evt = prefix ? prefix + event : event;
 
-Emitter.prototype.hasListeners = function(event){
-  return !! this.listeners(event).length;
+  if (!this._events || !this._events[evt]) return this;
+
+  var listeners = this._events[evt]
+    , events = [];
+
+  if (fn) {
+    if (listeners.fn) {
+      if (
+           listeners.fn !== fn
+        || (once && !listeners.once)
+        || (context && listeners.context !== context)
+      ) {
+        events.push(listeners);
+      }
+    } else {
+      for (var i = 0, length = listeners.length; i < length; i++) {
+        if (
+             listeners[i].fn !== fn
+          || (once && !listeners[i].once)
+          || (context && listeners[i].context !== context)
+        ) {
+          events.push(listeners[i]);
+        }
+      }
+    }
+  }
+
+  //
+  // Reset the array, or remove it completely if we have no more listeners.
+  //
+  if (events.length) {
+    this._events[evt] = events.length === 1 ? events[0] : events;
+  } else {
+    delete this._events[evt];
+  }
+
+  return this;
 };
 
-},{}],8:[function(require,module,exports){
+/**
+ * Remove all listeners or only the listeners for the specified event.
+ *
+ * @param {String} event The event want to remove all listeners for.
+ * @api public
+ */
+EventEmitter.prototype.removeAllListeners = function removeAllListeners(event) {
+  if (!this._events) return this;
+
+  if (event) delete this._events[prefix ? prefix + event : event];
+  else this._events = prefix ? {} : Object.create(null);
+
+  return this;
+};
+
+//
+// Alias methods names because people roll like that.
+//
+EventEmitter.prototype.off = EventEmitter.prototype.removeListener;
+EventEmitter.prototype.addListener = EventEmitter.prototype.on;
+
+//
+// This function doesn't apply anymore.
+//
+EventEmitter.prototype.setMaxListeners = function setMaxListeners() {
+  return this;
+};
+
+//
+// Expose the prefix.
+//
+EventEmitter.prefixed = prefix;
+
+//
+// Expose the module.
+//
+if ('undefined' !== typeof module) {
+  module.exports = EventEmitter;
+}
+
+},{}],9:[function(require,module,exports){
 (function (global){
 exports.ajax = function (params, callback) {
   if (typeof params == 'string') params = {url: params}
